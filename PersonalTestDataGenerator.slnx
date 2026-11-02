@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PersonalData.Api/PersonalData.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PersonalData.E2ETests/PersonalData.E2ETests.csproj" />
+    <Project Path="tests/PersonalData.IntegrationTests/PersonalData.IntegrationTests.csproj" />
+    <Project Path="tests/PersonalData.UnitTests/PersonalData.UnitTests.csproj" />
+  </Folder>
+</Solution>
