@@ -15,7 +15,7 @@ app: ## MySQL + API in Docker on http://localhost:8080 (no .NET SDK needed)
 	$(COMPOSE) --profile app up -d --build --wait
 	@echo API: http://localhost:8080
 
-db: ## Start MySQL on localhost:3307 and wait until the data is imported
+db: ## Start MySQL on localhost:3306 and wait until the data is imported
 	$(COMPOSE) up -d --wait db
 
 sonar: ## Start SonarQube on http://localhost:9000 (first start takes a few minutes)
