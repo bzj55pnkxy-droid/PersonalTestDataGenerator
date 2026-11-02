@@ -51,6 +51,24 @@ src/DataFiles/                 person-names.json, addresses.sql
 tests/                         Unit, integration, E2E (Playwright) and Postman tests
 ```
 
+## API
+
+All endpoints are `GET` and return JSON. OpenAPI description: `/openapi/v1.json`.
+
+| Endpoint | Returns |
+|---|---|
+| `/api/cpr` | CPR |
+| `/api/name-gender` | First name, last name, gender |
+| `/api/name-gender-dob` | First name, last name, gender, date of birth |
+| `/api/cpr-name-gender` | CPR, first name, last name, gender |
+| `/api/cpr-name-gender-dob` | CPR, first name, last name, gender, date of birth |
+| `/api/address` | Address |
+| `/api/phone` | Mobile phone number |
+| `/api/person` | All information for one person |
+| `/api/persons?count=N` | All information for N persons (2-100) |
+
+Request flow: `Controllers/FakePersonController` → `Services/FakePersonService` (one method per endpoint) → the generators in `Services/` → `Data/` (`person-names.json`, MySQL). `Random` and `TimeProvider` are injected so tests can control randomness and "today".
+
 ## Database
 
 | | |
