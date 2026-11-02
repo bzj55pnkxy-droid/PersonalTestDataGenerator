@@ -16,6 +16,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Frontend: serves wwwroot/index.html at "/" and the files under wwwroot/css and wwwroot/js.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseAuthorization();
 
 app.MapControllers();

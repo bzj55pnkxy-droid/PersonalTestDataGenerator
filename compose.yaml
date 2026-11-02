@@ -1,0 +1,60 @@
+# Local development stack. Use the Makefile (`make help`) rather than calling compose directly.
+# Credentials below are for local development only.
+name: personal-test-data-generator
+
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: addresses
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./src/DataFiles/addresses.sql:/docker-entrypoint-initdb.d/addresses.sql:ro
+    healthcheck:
+      # TCP ping only succeeds once the init script has finished (init runs with networking disabled).
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
+  api:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: src/PersonalData.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Addresses: Server=db;Port=3306;Database=addresses;User ID=app;Password=app
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  sonarqube:
+    profiles: [sonar]
+    image: sonarqube:community
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-extensions:/opt/sonarqube/extensions
+      - sonarqube-logs:/opt/sonarqube/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+volumes:
+  db-data:
+  sonarqube-data:
+  sonarqube-extensions:
+  sonarqube-logs:
