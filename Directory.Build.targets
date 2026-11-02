@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    Workaround for https://github.com/dotnet/sdk/issues/54309 (.NET 10 SDK, macOS/Linux):
+    IntermediateOutputPath evaluates to "obj\Debug/net10.0/", and `dotnet watch` uses it verbatim, logging
+    "Failed to read '...obj\Debug/net10.0/staticwebassets.development.json'". MSBuild itself normalizes the
+    separator, so only dotnet watch is affected. Fixed upstream in https://github.com/dotnet/sdk/pull/54536;
+    delete this file once the .NET 10 SDK includes that fix.
+  -->
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT' and '$(UsingMicrosoftNETSdkWeb)' == 'true'">
+    <IntermediateOutputPath>$(IntermediateOutputPath.Replace('\', '/'))</IntermediateOutputPath>
+  </PropertyGroup>
+</Project>
