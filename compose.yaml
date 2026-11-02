@@ -11,7 +11,8 @@ services:
       MYSQL_USER: app
       MYSQL_PASSWORD: app
     ports:
-      - "3306:3306"
+      # Host port 3307 so it doesn't clash with a locally installed MySQL on 3306; localhost-only because of the dev credentials.
+      - "127.0.0.1:3307:3306"
     volumes:
       - db-data:/var/lib/mysql
       - ./src/DataFiles/addresses.sql:/docker-entrypoint-initdb.d/addresses.sql:ro

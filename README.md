@@ -35,7 +35,7 @@ No .NET SDK? `make app` runs both MySQL and the API in Docker on <http://localho
 |---|---|
 | `make dev` | MySQL in Docker + API natively with hot reload on :5277 |
 | `make app` | MySQL + API in Docker on :8080 |
-| `make db` | MySQL only, on :3306 |
+| `make db` | MySQL only, on :3307 |
 | `make test` | Run all tests (`make db` first if tests need MySQL) |
 | `make sonar` | SonarQube on :9000 (first login `admin` / `admin`) |
 | `make logs` | Follow container logs |
@@ -55,7 +55,7 @@ tests/                         Unit, integration, E2E (Playwright) and Postman t
 
 | | |
 |---|---|
-| Host | `localhost:3306` |
+| Host | `localhost:3307` (3307, not 3306, so it doesn't clash with a locally installed MySQL) |
 | Database | `addresses` |
 | User / password | `app` / `app` (root: `root`) |
 
