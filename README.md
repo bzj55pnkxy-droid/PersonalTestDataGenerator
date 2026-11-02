@@ -8,7 +8,7 @@ ASP.NET Core (.NET 10) · MySQL 8 · HTML/CSS/JS · xUnit · Playwright · Postm
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - Docker with Compose (Docker Desktop, OrbStack, …)
-- `make` (preinstalled on macOS/Linux; on Windows use WSL or Git Bash, or run the commands from the `Makefile` by hand)
+- `make`: preinstalled on macOS/Linux. On Windows, run `winget install ezwinports.make` and use it from Git Bash (`make help` needs Git Bash's `awk`; the other targets also work in PowerShell)
 
 ## Quick start
 
@@ -19,6 +19,13 @@ make dev
 Starts MySQL in Docker and runs the API with hot reload. Open <http://localhost:5277>.
 
 On first start, MySQL imports `src/DataFiles/addresses.sql`. That takes a few seconds; `make` waits for it.
+
+Without `make`, the same thing is:
+
+```sh
+docker compose up -d --wait db
+dotnet watch --project src/PersonalData.Api
+```
 
 No .NET SDK? `make app` runs both MySQL and the API in Docker on <http://localhost:8080>.
 

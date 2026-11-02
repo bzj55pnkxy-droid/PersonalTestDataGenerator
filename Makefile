@@ -13,14 +13,14 @@ dev: db ## MySQL in Docker + API natively with hot reload on http://localhost:52
 
 app: ## MySQL + API in Docker on http://localhost:8080 (no .NET SDK needed)
 	$(COMPOSE) --profile app up -d --build --wait
-	@echo "API: http://localhost:8080"
+	@echo API: http://localhost:8080
 
 db: ## Start MySQL on localhost:3306 and wait until the data is imported
 	$(COMPOSE) up -d --wait db
 
 sonar: ## Start SonarQube on http://localhost:9000 (first start takes a few minutes)
 	$(COMPOSE) --profile sonar up -d --wait sonarqube
-	@echo "SonarQube: http://localhost:9000"
+	@echo SonarQube: http://localhost:9000
 
 test: ## Run all test projects (run `make db` first once tests need MySQL)
 	dotnet test
