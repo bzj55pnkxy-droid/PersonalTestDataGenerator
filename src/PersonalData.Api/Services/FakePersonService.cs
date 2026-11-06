@@ -52,14 +52,41 @@ public sealed class FakePersonService(
             birthDate);
     }
 
-    public Task<Address> GetAddressAsync(CancellationToken cancellationToken = default) =>
-        addressGenerator.GenerateAsync(cancellationToken);
+    public Address GetAddress() => addressGenerator.Generate();
 
-    public string GetPhoneNumber() => throw new NotImplementedException();
+    public string GetPhoneNumber() => phoneNumberGenerator.Generate();
 
-    public Task<Person> GetPersonAsync(CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+    public Person GetPerson()
+    {
+        var nameAndGender = nameGenderGenerator.Generate();
+        var birthDate = birthDateGenerator.Generate();
+        var cpr = cprGenerator.Generate(birthDate, nameAndGender.Gender);
+        var address = addressGenerator.Generate();
+        var phoneNumber = phoneNumberGenerator.Generate();
 
-    public Task<IReadOnlyList<Person>> GetPersonsAsync(int count, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+        return new Person(
+            cpr,
+            nameAndGender.FirstName,
+            nameAndGender.LastName,
+            nameAndGender.Gender,
+            birthDate,
+            address,
+            phoneNumber);
+    }
+
+    public IReadOnlyList<Person> GetPersons(int count)
+    {
+        if (count < 2 || count > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count), "Count must be between 2 and 100.");
+        }
+
+        var persons = new List<Person>();
+        for (var i = 0; i < count; i++)
+        {
+            persons.Add(GetPerson());
+        }
+
+        return persons;
+    }
 }

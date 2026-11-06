@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using PersonalData.Api.Models;
 using PersonalData.Api.Services;
@@ -29,18 +30,18 @@ public sealed class FakePersonController(IFakePersonService fakePersonService) :
         fakePersonService.GetCprNameGenderAndBirthDate();
 
     [HttpGet("address")]
-    public async Task<ActionResult<Address>> GetAddress(CancellationToken cancellationToken) =>
-        await fakePersonService.GetAddressAsync(cancellationToken);
+    public ActionResult<Address> GetAddress() =>
+        fakePersonService.GetAddress();
 
     [HttpGet("phone")]
     public ActionResult<PhoneNumberResponse> GetPhoneNumber() =>
         new PhoneNumberResponse(fakePersonService.GetPhoneNumber());
 
     [HttpGet("person")]
-    public async Task<ActionResult<Person>> GetPerson(CancellationToken cancellationToken) =>
-        await fakePersonService.GetPersonAsync(cancellationToken);
+    public ActionResult<Person> GetPerson() =>
+        fakePersonService.GetPerson();
 
     [HttpGet("persons")]
-    public async Task<ActionResult<IReadOnlyList<Person>>> GetPersons([FromQuery] int count, CancellationToken cancellationToken) =>
-        Ok(await fakePersonService.GetPersonsAsync(count, cancellationToken));
+    public ActionResult<IReadOnlyList<Person>> GetPersons([FromQuery, Range(2, 100)] int count) =>
+        Ok(fakePersonService.GetPersons(count));
 }

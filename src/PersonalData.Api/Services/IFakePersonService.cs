@@ -18,12 +18,12 @@ public interface IFakePersonService
 
     CprNameGenderAndBirthDate GetCprNameGenderAndBirthDate();
 
-    Task<Address> GetAddressAsync(CancellationToken cancellationToken = default);
+    Address GetAddress();
 
     string GetPhoneNumber();
 
-    Task<Person> GetPersonAsync(CancellationToken cancellationToken = default);
+    Person GetPerson();
 
     /// <summary>All information for <paramref name="count"/> persons; valid range is 2-100.</summary>
-    Task<IReadOnlyList<Person>> GetPersonsAsync(int count, CancellationToken cancellationToken = default);
+    IReadOnlyList<Person> GetPersons(int count);
 }

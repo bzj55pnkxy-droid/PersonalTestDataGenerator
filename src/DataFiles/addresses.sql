@@ -5,6 +5,7 @@
 
 SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';
 SET time_zone = '+00:00';
+SET NAMES utf8mb4;
 
 CREATE DATABASE IF NOT EXISTS `addresses`
   DEFAULT CHARACTER SET utf8mb4
@@ -18,7 +19,7 @@ CREATE TABLE IF NOT EXISTS `postal_code` (
   `cPostalCode` char(4) NOT NULL,
   `cTownName` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`cPostalCode`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Procedure (DDL)
 DROP PROCEDURE IF EXISTS `RemoveDuplicates`;

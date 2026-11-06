@@ -5,9 +5,9 @@ namespace PersonalData.Api.Services;
 
 public sealed class AddressGenerator(IPostalCodeRepository postalCodes, Random random) : IAddressGenerator
 {
-    public async Task<Address> GenerateAsync(CancellationToken cancellationToken = default)
+    public Address Generate()
     {
-        var towns = await postalCodes.GetAllAsync(cancellationToken);
+        var towns = postalCodes.GetAll();
         if (towns.Count == 0)
         {
             throw new InvalidOperationException("No postal codes are available.");
