@@ -11,13 +11,46 @@ public sealed class FakePersonService(
 {
     public string GetCpr() => throw new NotImplementedException();
 
-    public NameAndGender GetNameAndGender() => throw new NotImplementedException();
+    public NameAndGender GetNameAndGender() => nameGenderGenerator.Generate();
 
-    public NameGenderAndBirthDate GetNameGenderAndBirthDate() => throw new NotImplementedException();
+    public NameGenderAndBirthDate GetNameGenderAndBirthDate()
+    {
+        var nameAndGender = nameGenderGenerator.Generate();
+        var birthDate = birthDateGenerator.Generate();
 
-    public CprNameAndGender GetCprNameAndGender() => throw new NotImplementedException();
+        return new NameGenderAndBirthDate(
+            nameAndGender.FirstName,
+            nameAndGender.LastName,
+            nameAndGender.Gender,
+            birthDate);
+    }
 
-    public CprNameGenderAndBirthDate GetCprNameGenderAndBirthDate() => throw new NotImplementedException();
+    public CprNameAndGender GetCprNameAndGender()
+    {
+        var nameAndGender = nameGenderGenerator.Generate();
+        var birthDate = birthDateGenerator.Generate();
+        var cpr = cprGenerator.Generate(birthDate, nameAndGender.Gender);
+
+        return new CprNameAndGender(
+            cpr,
+            nameAndGender.FirstName,
+            nameAndGender.LastName,
+            nameAndGender.Gender);
+    }
+
+    public CprNameGenderAndBirthDate GetCprNameGenderAndBirthDate()
+    {
+        var nameAndGender = nameGenderGenerator.Generate();
+        var birthDate = birthDateGenerator.Generate();
+        var cpr = cprGenerator.Generate(birthDate, nameAndGender.Gender);
+
+        return new CprNameGenderAndBirthDate(
+            cpr,
+            nameAndGender.FirstName,
+            nameAndGender.LastName,
+            nameAndGender.Gender,
+            birthDate);
+    }
 
     public Task<Address> GetAddressAsync(CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
