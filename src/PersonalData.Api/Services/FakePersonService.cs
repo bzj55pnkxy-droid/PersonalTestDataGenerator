@@ -53,7 +53,7 @@ public sealed class FakePersonService(
     }
 
     public Task<Address> GetAddressAsync(CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+        addressGenerator.GenerateAsync(cancellationToken);
 
     public string GetPhoneNumber() => throw new NotImplementedException();
 
