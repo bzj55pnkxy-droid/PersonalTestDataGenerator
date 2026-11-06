@@ -1,1 +1,52 @@
-<h1>Det køre !!</h1>
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Persondata-generator</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/script.js" defer></script>
+</head>
+<body>
+    <main>
+        <header>
+            <p class="eyebrow">PERSONAL TEST DATA GENERATOR</p>
+            <h1>Persondata til dine tests</h1>
+            <p>Vælg de oplysninger, du vil generere. Alle oplysninger er tilfældigt genererede testdata.</p>
+        </header>
+
+        <form id="generateForm" class="panel">
+            <div class="field">
+                <label for="endpoint">Hvad vil du generere?</label>
+                <select id="endpoint" name="endpoint">
+                    <option value="person">En person · alle oplysninger</option>
+                    <option value="persons">Flere personer · alle oplysninger</option>
+                    <option value="name-gender">Navn og køn</option>
+                    <option value="name-gender-dob">Navn, køn og fødselsdato</option>
+                    <option value="cpr">CPR-nummer</option>
+                    <option value="cpr-name-gender">CPR, navn og køn</option>
+                    <option value="cpr-name-gender-dob">CPR, navn, køn og fødselsdato</option>
+                    <option value="address">Adresse</option>
+                    <option value="phone">Telefonnummer</option>
+                </select>
+            </div>
+            <div id="countField" class="field" hidden>
+                <label for="count">Antal personer (2–100)</label>
+                <input id="count" name="count" type="number" min="2" max="100" value="5" disabled required>
+            </div>
+            <button id="generateButton" type="submit">Generér data</button>
+        </form>
+
+        <section class="results" aria-labelledby="resultsTitle">
+            <div class="results-heading">
+                <h2 id="resultsTitle">Resultat</h2>
+                <p id="status" role="status">Klar til at generere</p>
+            </div>
+            <p id="error" class="error" role="alert" hidden></p>
+            <div id="output" aria-busy="false">
+                <p class="empty">Dine genererede oplysninger vises her.</p>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

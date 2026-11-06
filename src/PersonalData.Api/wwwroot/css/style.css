@@ -1,0 +1,44 @@
+:root {
+    font-family: system-ui, sans-serif;
+    color: #182c3c;
+    background: #f3f6f8;
+    line-height: 1.5;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+main { max-width: 1000px; margin: 0 auto; padding: 56px 24px; }
+header { max-width: 700px; margin-bottom: 32px; }
+h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.15; margin: 12px 0; letter-spacing: -.04em; }
+h2 { font-size: 1.15rem; margin: 0; }
+header > p:last-child { color: #566775; }
+.eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .13em; color: #22705b; }
+.panel, .card { background: white; border: 1px solid #dce3e8; border-radius: 12px; padding: 24px; }
+.panel { display: flex; flex-wrap: wrap; align-items: end; gap: 20px; }
+.field { flex: 1 1 260px; }
+#countField { flex: 0 1 180px; }
+label { display: block; font-size: .9rem; font-weight: 600; margin-bottom: 8px; }
+select, input, button { font: inherit; border-radius: 6px; min-height: 46px; }
+select, input { width: 100%; padding: 10px 12px; background: white; color: inherit; border: 1px solid #aab8c2; }
+button { border: 0; padding: 10px 22px; background: #20634f; color: white; font-weight: 600; cursor: pointer; }
+button:hover { background: #174b3c; }
+button:disabled { opacity: .65; cursor: wait; }
+:focus-visible { outline: 3px solid #3b82c4; outline-offset: 3px; }
+.results { margin-top: 36px; }
+.results-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+#status { margin: 0; font-size: .85rem; color: #566775; }
+#output { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: 16px; }
+.empty { grid-column: 1 / -1; text-align: center; padding: 40px 16px; color: #566775; border: 1px dashed #b5c3cd; border-radius: 12px; }
+.card h3 { margin: 0 0 20px; font-size: 1.15rem; }
+dl { margin: 0; }
+.row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; padding: 9px 0; border-top: 1px solid #edf0f2; }
+dt { color: #566775; font-size: .85rem; }
+dd { margin: 0; overflow-wrap: anywhere; }
+.error { background: #fff0ed; border: 1px solid #e6aaa2; color: #8c2920; border-radius: 8px; padding: 16px; }
+
+@media (max-width: 540px) {
+    main { padding: 32px 16px; }
+    .panel, .card { padding: 20px; }
+    .panel button, #countField { flex: 1 1 100%; }
+}

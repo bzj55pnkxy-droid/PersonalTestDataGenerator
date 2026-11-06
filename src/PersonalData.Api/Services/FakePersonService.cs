@@ -9,7 +9,7 @@ public sealed class FakePersonService(
     IAddressGenerator addressGenerator,
     IPhoneNumberGenerator phoneNumberGenerator) : IFakePersonService
 {
-    public string GetCpr() => throw new NotImplementedException();
+    public string GetCpr() => GetCprNameAndGender().Cpr;
 
     public NameAndGender GetNameAndGender() => nameGenderGenerator.Generate();
 
