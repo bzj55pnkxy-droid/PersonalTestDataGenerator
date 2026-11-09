@@ -40,13 +40,18 @@ No .NET SDK? `make app` runs both MySQL and the API in Docker on <http://localho
 | `make dev` | MySQL in Docker + API natively with hot reload on :5277 |
 | `make app` | MySQL + API in Docker on :8080 |
 | `make db` | MySQL only, on :3307 |
-| `make test` | Run all tests (`make db` first if tests need MySQL) |
+| `make test` | Run all tests; needs `make app` first (MySQL for the integration tests, the app on :8080 for the E2E tests) |
+| `make e2e` | Start the app (`make app`) and run only the Playwright E2E tests in `tests/PersonalData.E2ETests` |
 | `make api-test` | Run the Postman collection `tests/Postman/PersonalData.postman_collection.json` with Newman (Docker) against the API container (starts it if needed) |
 | `make ci` | Local CI pipeline, see below |
 | `make sonar` | SonarQube on :9000, dashboard open without login |
 | `make logs` | Follow container logs |
 | `make down` | Stop containers, keep data |
 | `make clean` | Stop containers and delete data (DB is re-imported next start) |
+
+The unit tests in `tests/PersonalData.UnitTests` need nothing running: `dotnet test tests/PersonalData.UnitTests`. They give the generators fake dice (`Fakes.cs`) that always roll the lowest or highest number, so every expected value is fixed.
+
+The E2E tests download Chromium on the first run, so no manual Playwright setup is needed. They test `http://localhost:8080`; set `E2E_BASE_URL` to use another address.
 
 ## Integration tests
 
@@ -64,7 +69,7 @@ To run only the person endpoint tests, append `--filter FullyQualifiedName~Perso
 `make ci` runs `scripts/ci.sh`:
 
 1. Starts MySQL + API in Docker and waits until both are healthy
-2. Builds and runs all test projects with coverage, wrapped in a SonarQube analysis
+2. Builds and runs all test projects (unit, integration, Playwright E2E) with coverage, wrapped in a SonarQube analysis
 3. Runs the Postman collection with Newman against the API container
 4. Stops MySQL + API (also on failure; data is kept)
 

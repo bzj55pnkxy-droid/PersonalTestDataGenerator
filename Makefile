@@ -3,10 +3,10 @@ PROFILES := --profile app --profile sonar
 API      := src/PersonalData.Api
 
 .DEFAULT_GOAL := help
-.PHONY: help dev app db sonar test api-test ci logs down clean
+.PHONY: help dev app db sonar test e2e api-test ci logs down clean
 
 help: ## List available targets
-	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  make %-8s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "} /^[a-z0-9-]+:.*## / {printf "  make %-8s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 dev: db ## MySQL in Docker + API natively with hot reload on http://localhost:5277
 	dotnet watch --project $(API)
@@ -25,8 +25,11 @@ sonar: ## Start SonarQube on http://localhost:9000, no login needed (first start
 		|| echo "Could not log in as admin/admin; if the admin password was changed, 'make clean' resets SonarQube."
 	@echo SonarQube: http://localhost:9000
 
-test: ## Run all test projects (run `make db` first once tests need MySQL)
+test: ## Run all test projects (needs `make app` running: the E2E tests use http://localhost:8080)
 	dotnet test
+
+e2e: app ## Run only the Playwright E2E tests against the app in Docker (starts it if needed)
+	dotnet test tests/PersonalData.E2ETests
 
 api-test: ## Run the Postman collection with Newman against the API in Docker (starts it if needed)
 	$(COMPOSE) --profile app run --rm newman
