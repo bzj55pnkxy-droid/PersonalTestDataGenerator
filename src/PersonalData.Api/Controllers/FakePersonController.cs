@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using PersonalData.Api.Models;
 using PersonalData.Api.Services;
 
@@ -10,38 +11,48 @@ namespace PersonalData.Api.Controllers;
 public sealed class FakePersonController(IFakePersonService fakePersonService) : ControllerBase
 {
     [HttpGet("cpr")]
+    [ProducesResponseType<CprResponse>(StatusCodes.Status200OK)]
     public ActionResult<CprResponse> GetCpr() =>
-        new CprResponse(fakePersonService.GetCpr());
+        Ok(new CprResponse(fakePersonService.GetCpr()));
 
     [HttpGet("name-gender")]
+    [ProducesResponseType<NameAndGender>(StatusCodes.Status200OK)]
     public ActionResult<NameAndGender> GetNameAndGender() =>
-        fakePersonService.GetNameAndGender();
+        Ok(fakePersonService.GetNameAndGender());
 
     [HttpGet("name-gender-dob")]
+    [ProducesResponseType<NameGenderAndBirthDate>(StatusCodes.Status200OK)]
     public ActionResult<NameGenderAndBirthDate> GetNameGenderAndBirthDate() =>
-        fakePersonService.GetNameGenderAndBirthDate();
+        Ok(fakePersonService.GetNameGenderAndBirthDate());
 
     [HttpGet("cpr-name-gender")]
+    [ProducesResponseType<CprNameAndGender>(StatusCodes.Status200OK)]
     public ActionResult<CprNameAndGender> GetCprNameAndGender() =>
-        fakePersonService.GetCprNameAndGender();
+        Ok(fakePersonService.GetCprNameAndGender());
 
     [HttpGet("cpr-name-gender-dob")]
+    [ProducesResponseType<CprNameGenderAndBirthDate>(StatusCodes.Status200OK)]
     public ActionResult<CprNameGenderAndBirthDate> GetCprNameGenderAndBirthDate() =>
-        fakePersonService.GetCprNameGenderAndBirthDate();
+        Ok(fakePersonService.GetCprNameGenderAndBirthDate());
 
     [HttpGet("address")]
+    [ProducesResponseType<Address>(StatusCodes.Status200OK)]
     public ActionResult<Address> GetAddress() =>
-        fakePersonService.GetAddress();
+        Ok(fakePersonService.GetAddress());
 
     [HttpGet("phone")]
+    [ProducesResponseType<PhoneNumberResponse>(StatusCodes.Status200OK)]
     public ActionResult<PhoneNumberResponse> GetPhoneNumber() =>
-        new PhoneNumberResponse(fakePersonService.GetPhoneNumber());
+        Ok(new PhoneNumberResponse(fakePersonService.GetPhoneNumber()));
 
     [HttpGet("person")]
+    [ProducesResponseType<Person>(StatusCodes.Status200OK)]
     public ActionResult<Person> GetPerson() =>
-        fakePersonService.GetPerson();
+        Ok(fakePersonService.GetPerson());
 
     [HttpGet("persons")]
-    public ActionResult<IReadOnlyList<Person>> GetPersons([FromQuery, Range(2, 100)] int count) =>
+    [ProducesResponseType<IReadOnlyList<Person>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public ActionResult<IReadOnlyList<Person>> GetPersons([FromQuery, BindRequired, Range(2, 100)] int count) =>
         Ok(fakePersonService.GetPersons(count));
 }

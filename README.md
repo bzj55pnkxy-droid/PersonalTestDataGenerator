@@ -67,6 +67,13 @@ All endpoints are `GET` and return JSON. OpenAPI description: `/openapi/v1.json`
 | `/api/person` | All information for one person |
 | `/api/persons?count=N` | All information for N persons (2-100) |
 
+### HTTP status codes
+
+- `200 OK`: successful generation on all endpoints; the response contains JSON.
+- `400 Bad Request`: `/api/persons` requires an integer `count` between 2 and 100 (inclusive). Missing, empty, non-integer, or out-of-range values return `ValidationProblemDetails` with errors for `count`.
+
+These responses and their schemas are documented in OpenAPI.
+
 Request flow: `Controllers/FakePersonController` → `Services/FakePersonService` (one method per endpoint) → the generators in `Services/` → `Data/` (`person-names.json`, MySQL). `Random` and `TimeProvider` are injected so tests can control randomness and "today".
 
 ## Database
