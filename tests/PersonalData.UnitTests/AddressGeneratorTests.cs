@@ -3,107 +3,215 @@ using PersonalData.Api.Services;
 
 namespace PersonalData.UnitTests;
 
-/// <summary>
-/// Tests AddressGenerator with fake dice. The lowest/highest rolls check both ends of every range;
-/// the loaded rolls reach the branches those two never take (door kinds, door number, floor number)
-/// - that is the white-box part, found via coverage.
-/// </summary>
 public sealed class AddressGeneratorTests
 {
+    private const int RightDoorChoice = 1;
+    private const int LeftDoorChoice = 8;
+    private const int MiddleDoorChoice = 15;
+
     private static readonly StubPostalCodeRepository Towns = new(
         new PostalTown("2100", "København Ø"),
         new PostalTown("9990", "Skagen"));
 
-    [Fact]
-    public void Lowest_rolls_give_the_lowest_address()
-    {
-        // Arrange
-        var generator = new AddressGenerator(Towns, new LowestRandom());
-
-        // Act
-        var address = generator.Generate();
-
-        // Assert
-        // The street is 40 characters: the first must be a letter so it is 'a',
-        // the rest are the lowest character, a space.
-        Assert.Equal(
-            new Address("a" + new string(' ', 39), "1A", "st", "th", "2100", "København Ø"),
-            address);
-    }
-
-    [Fact]
-    public void Highest_rolls_give_the_highest_address()
-    {
-        // Arrange
-        var generator = new AddressGenerator(Towns, new HighestRandom());
-
-        // Act
-        var address = generator.Generate();
-
-        // Assert
-        Assert.Equal(
-            new Address(new string('Å', 40), "999", "99", "å-999", "9990", "Skagen"),
-            address);
-    }
-
-    // The generator rolls 1-20 for the kind of door:
-    // 1-7 th, 8-14 tv, 15-16 mf, 17-18 a number 1-50, 19 letter + number, 20 letter-dash-number.
-    // All other rolls are the lowest.
     [Theory]
-    [InlineData(8, "tv")]
-    [InlineData(15, "mf")]
-    [InlineData(17, "1")]
-    [InlineData(19, "a1")]
-    public void Door_type_roll_picks_the_kind_of_door(int doorTypeRoll, string expectedDoor)
+    [InlineData(1, null, "1")]
+    [InlineData(999, null, "999")]
+    [InlineData(1, 'A', "1A")]
+    [InlineData(999, 'Z', "999Z")]
+    [InlineData(43, 'B', "43B")]
+    public void GenerateReturnsHouseNumberWithOptionalUppercaseLetter(
+        int number, char? letter, string expected)
     {
         // Arrange
-        var random = new LoadedRandom { [(1, 21)] = doorTypeRoll };
-        var generator = new AddressGenerator(Towns, random);
+        var generator = CreateGeneratorForHouseNumber(number, letter);
 
         // Act
         var address = generator.Generate();
 
         // Assert
-        Assert.Equal(expectedDoor, address.Door);
+        Assert.Equal(expected, address.Number);
     }
 
-    [Fact]
-    public void Highest_numbered_door_is_50()
+    [Theory]
+    [InlineData(null, "st")]
+    [InlineData(1, "1")]
+    [InlineData(50, "50")]
+    [InlineData(99, "99")]
+    public void GenerateReturnsGroundFloorOrValidFloorNumber(int? floorNumber, string expected)
     {
         // Arrange
-        var random = new LoadedRandom { [(1, 21)] = 17, [(1, 51)] = 50 };
-        var generator = new AddressGenerator(Towns, random);
+        var generator = CreateGeneratorForFloor(floorNumber);
 
         // Act
         var address = generator.Generate();
 
         // Assert
-        Assert.Equal("50", address.Door);
+        Assert.Equal(expected, address.Floor);
     }
 
-    [Fact]
-    public void Lowest_numbered_floor_is_1()
+    [Theory]
+    [InlineData(RightDoorChoice, "th")]
+    [InlineData(LeftDoorChoice, "tv")]
+    [InlineData(MiddleDoorChoice, "mf")]
+    public void GenerateReturnsNamedDoorPosition(int doorChoice, string expected)
     {
         // Arrange
-        // Next(100) decides the house letter (< 20) and "st" (< 30).
-        // 99 means a floor number, and that roll is the lowest, 1.
-        var random = new LoadedRandom { [(0, 100)] = 99 };
-        var generator = new AddressGenerator(Towns, random);
+        var generator = CreateGeneratorForNamedDoor(doorChoice);
 
         // Act
         var address = generator.Generate();
 
         // Assert
-        Assert.Equal("1", address.Floor);
+        Assert.Equal(expected, address.Door);
+    }
+
+    [Theory]
+    [InlineData(1, "1")]
+    [InlineData(25, "25")]
+    [InlineData(50, "50")]
+    public void GenerateReturnsValidNumericDoor(int number, string expected)
+    {
+        // Arrange
+        var generator = CreateGeneratorForNumericDoor(number);
+
+        // Act
+        var address = generator.Generate();
+
+        // Assert
+        Assert.Equal(expected, address.Door);
+    }
+
+    [Theory]
+    [InlineData(false, 3, "c3")]
+    [InlineData(false, 14, "c14")]
+    [InlineData(false, 123, "c123")]
+    [InlineData(true, 3, "c-3")]
+    [InlineData(true, 14, "c-14")]
+    [InlineData(true, 123, "c-123")]
+    public void GenerateReturnsLetterDoorWithOneToThreeDigitsAndOptionalDash(
+        bool hasDash, int number, string expected)
+    {
+        // Arrange
+        var generator = CreateGeneratorForLetterDoor(hasDash, number);
+
+        // Act
+        var address = generator.Generate();
+
+        // Assert
+        Assert.Equal(expected, address.Door);
+    }
+
+    [Theory]
+    [InlineData("2100", "København Ø")]
+    [InlineData("9990", "Skagen")]
+    public void GenerateKeepsPostalCodeAndTownFromSameRow(string expectedPostalCode, string expectedTown)
+    {
+        // Arrange
+        var generator = CreateGeneratorForTown(expectedPostalCode);
+
+        // Act
+        var address = generator.Generate();
+
+        // Assert
+        Assert.Equal((expectedPostalCode, expectedTown), (address.PostalCode, address.TownName));
+    }
+
+    [Theory]
+    [InlineData('a')] // The formerly failing lowest choice must not fill the street with spaces.
+    [InlineData('z')]
+    [InlineData('A')]
+    [InlineData('æ')]
+    [InlineData('ø')]
+    [InlineData('å')]
+    [InlineData('Æ')]
+    [InlineData('Ø')]
+    [InlineData('Å')]
+    public void GenerateReturnsNonEmptyAlphabeticStreet(char streetCharacter)
+    {
+        // Arrange
+        var generator = CreateGeneratorForStreetCharacter(streetCharacter);
+
+        // Act
+        var address = generator.Generate();
+
+        // Assert
+        Assert.NotEmpty(address.Street);
+        Assert.All(address.Street, character => Assert.True(char.IsLetter(character)));
     }
 
     [Fact]
-    public void No_postal_codes_throws()
+    public void GenerateThrowsWhenNoPostalCodesAreAvailable()
     {
         // Arrange
         var generator = new AddressGenerator(new StubPostalCodeRepository(), new LowestRandom());
 
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => generator.Generate());
+        // Act
+        Action generateAddress = () => generator.Generate();
+
+        // Assert
+        Assert.Throws<InvalidOperationException>(generateAddress);
+    }
+
+    private static AddressGenerator CreateGeneratorForHouseNumber(int number, char? letter)
+    {
+        var random = new LoadedRandom
+        {
+            [(1, 1000)] = number,
+            [(0, 100)] = letter.HasValue ? 0 : 99,
+            [(0, 26)] = letter.HasValue ? letter.Value - 'A' : 0
+        };
+        return new AddressGenerator(Towns, random);
+    }
+
+    private static AddressGenerator CreateGeneratorForFloor(int? floorNumber)
+    {
+        var random = new LoadedRandom
+        {
+            [(0, 100)] = floorNumber.HasValue ? 99 : 0,
+            [(1, 100)] = floorNumber ?? 1
+        };
+        return new AddressGenerator(Towns, random);
+    }
+
+    private static AddressGenerator CreateGeneratorForNamedDoor(int doorChoice)
+    {
+        var random = new LoadedRandom { [(1, 21)] = doorChoice };
+        return new AddressGenerator(Towns, random);
+    }
+
+    private static AddressGenerator CreateGeneratorForNumericDoor(int number)
+    {
+        var random = new LoadedRandom { [(1, 21)] = 17, [(1, 51)] = number };
+        return new AddressGenerator(Towns, random);
+    }
+
+    private static AddressGenerator CreateGeneratorForLetterDoor(bool hasDash, int number)
+    {
+        var random = new LoadedRandom
+        {
+            [(1, 21)] = hasDash ? 20 : 19,
+            [(0, 29)] = 2, // Select the letter 'c'.
+            [(1, 1000)] = number
+        };
+        return new AddressGenerator(Towns, random);
+    }
+
+    private static AddressGenerator CreateGeneratorForTown(string postalCode)
+    {
+        var townChoice = postalCode switch
+        {
+            "2100" => 0,
+            "9990" => 1,
+            _ => throw new ArgumentOutOfRangeException(nameof(postalCode))
+        };
+        var random = new LoadedRandom { [(0, 2)] = townChoice };
+        return new AddressGenerator(Towns, random);
+    }
+
+    private static AddressGenerator CreateGeneratorForStreetCharacter(char streetCharacter)
+    {
+        const string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZæøåÆØÅ";
+        var random = new LoadedRandom { [(0, 58)] = characters.IndexOf(streetCharacter) };
+        return new AddressGenerator(Towns, random);
     }
 }

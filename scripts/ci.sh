@@ -101,6 +101,7 @@ build() {
       /k:"$SONAR_PROJECT" \
       /d:sonar.host.url="$SONAR_HOST_URL" \
       /d:sonar.token="$SONAR_TOKEN" \
+      /d:sonar.coverage.exclusions="**/wwwroot/**" \
       /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml" &&
     dotnet build
 }

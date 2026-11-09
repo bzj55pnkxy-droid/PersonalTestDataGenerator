@@ -1,32 +1,30 @@
 using Microsoft.Extensions.Configuration;
 using PersonalData.Api.Data;
+using PersonalData.Api.Models;
 
 namespace PersonalData.IntegrationTests;
 
 public class MySqlPostalCodeRepositoryTests
 {
     [Fact]
-    public void GetAll_LoadsKnownPostalTownFromDatabase()
+    public void GetAllLoadsKnownPostalTownFromDatabase()
     {
         // Arrange
         var settings = new Dictionary<string, string?>
         {
             ["ConnectionStrings:Addresses"] =
-        "Server=localhost;Port=3307;Database=addresses;User ID=app;Password=app"
+                "Server=localhost;Port=3307;Database=addresses;User ID=app;Password=app"
         };
 
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(settings)
             .Build();
+        var repository = new MySqlPostalCodeRepository(configuration);
 
         // Act
-        var repository = new MySqlPostalCodeRepository(configuration);
-        var postalCodes = repository.GetAll();
+        var postalTowns = repository.GetAll();
 
         // Assert
-        Assert.Contains(postalCodes, p =>
-            p.PostalCode == "8000" &&
-            p.TownName == "Aarhus C");
-
+        Assert.Contains(new PostalTown("8000", "Aarhus C"), postalTowns);
     }
 }

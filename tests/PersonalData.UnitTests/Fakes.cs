@@ -11,14 +11,6 @@ public sealed class LowestRandom : Random
     public override int Next(int minValue, int maxValue) => minValue;
 }
 
-/// <summary>Dice that always roll the highest possible number.</summary>
-public sealed class HighestRandom : Random
-{
-    public override int Next(int maxValue) => maxValue - 1;
-
-    public override int Next(int minValue, int maxValue) => maxValue - 1;
-}
-
 /// <summary>
 /// Dice that roll the lowest possible number, except for the rolls you load:
 /// <c>new LoadedRandom { [(1, 21)] = 17 }</c> answers 17 whenever the code calls <c>Next(1, 21)</c>.

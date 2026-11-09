@@ -31,11 +31,10 @@ public sealed class AddressGenerator(IPostalCodeRepository postalCodes, Random r
 
     private string GetRandomText(int length)
     {
-        const string characters = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZæøåÆØÅ";
+        const string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZæøåÆØÅ";
         var text = new char[length];
 
-        // The street must start with a letter.
-        text[0] = characters[random.Next(1, characters.Length)];
+        text[0] = characters[random.Next(characters.Length)];
         for (var i = 1; i < length; i++)
         {
             text[i] = characters[random.Next(characters.Length)];

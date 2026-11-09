@@ -3,48 +3,45 @@ using PersonalData.Api.Services;
 
 namespace PersonalData.UnitTests;
 
-/// <summary>
-/// Tests that <see cref="NameGenderGenerator"/> picks a name from the list, using a stub name list
-/// and fake dice that always roll the lowest or the highest number.
-/// </summary>
+/// <summary>Document section 1: select a complete name/gender row without changing its contents.</summary>
 public sealed class NameGenderGeneratorTests
 {
-    private static readonly NameAndGender Annemette = new("Annemette P.", "Nilsson", Gender.Female);
-    private static readonly NameAndGender Jens = new("Jens", "Hansen", Gender.Male);
-
-    [Fact]
-    public void Lowest_roll_picks_the_first_name_in_the_list()
+    [Theory]
+    [InlineData(Gender.Female, "Annemette P.", "Nilsson")]
+    [InlineData(Gender.Male, "Simon L.", "Østergaard")]
+    public void GenerateReturnsNameAndGenderFromSameRow(
+        Gender gender, string expectedFirstName, string expectedLastName)
     {
         // Arrange
-        var generator = new NameGenderGenerator(new StubPersonNameRepository(Annemette, Jens), new LowestRandom());
+        var generator = CreateGeneratorForGender(gender);
 
         // Act
         var nameAndGender = generator.Generate();
 
         // Assert
-        Assert.Equal(Annemette, nameAndGender);
+        Assert.Equal(new NameAndGender(expectedFirstName, expectedLastName, gender), nameAndGender);
     }
 
     [Fact]
-    public void Highest_roll_picks_the_last_name_in_the_list()
-    {
-        // Arrange
-        var generator = new NameGenderGenerator(new StubPersonNameRepository(Annemette, Jens), new HighestRandom());
-
-        // Act
-        var nameAndGender = generator.Generate();
-
-        // Assert
-        Assert.Equal(Jens, nameAndGender);
-    }
-
-    [Fact]
-    public void No_names_throws()
+    public void GenerateThrowsWhenNoNamesAreAvailable()
     {
         // Arrange
         var generator = new NameGenderGenerator(new StubPersonNameRepository(), new LowestRandom());
 
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => generator.Generate());
+        // Act
+        Action generateName = () => generator.Generate();
+
+        // Assert
+        Assert.Throws<InvalidOperationException>(generateName);
+    }
+
+    private static NameGenderGenerator CreateGeneratorForGender(Gender gender)
+    {
+        var names = new StubPersonNameRepository(
+            new NameAndGender("Annemette P.", "Nilsson", Gender.Female),
+            new NameAndGender("Simon L.", "Østergaard", Gender.Male));
+        var selectedRow = gender == Gender.Female ? 0 : 1;
+        var random = new LoadedRandom { [(0, 2)] = selectedRow };
+        return new NameGenderGenerator(names, random);
     }
 }

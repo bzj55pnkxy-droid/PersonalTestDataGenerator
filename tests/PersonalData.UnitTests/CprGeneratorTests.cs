@@ -1,45 +1,88 @@
+using System.Globalization;
 using PersonalData.Api.Models;
 using PersonalData.Api.Services;
 
 namespace PersonalData.UnitTests;
 
-/// <summary>
-/// Tests that <see cref="CprGenerator"/> builds the CPR number from the birth date, three random digits
-/// and a gender digit, using fake dice that always roll the lowest or the highest number.
-/// </summary>
 public sealed class CprGeneratorTests
 {
-    // 06-01-2005 gives "060105". Day and month differ, so it also proves the day comes before the month.
-    private static readonly DateOnly BirthDate = new(2005, 1, 6);
-
-    // CPR = date (ddMMyy), then 3 digits 000-999, then a last digit that is even for female and odd for male.
     [Theory]
-    [InlineData(Gender.Female, "0601050000")]
-    [InlineData(Gender.Male, "0601050001")]
-    public void Lowest_rolls_give_the_lowest_cpr_for_the_gender(Gender gender, string expectedCpr)
+    [InlineData("2005-01-31", "310105")]
+    [InlineData("2005-02-01", "010205")]
+    [InlineData("2005-04-30", "300405")]
+    [InlineData("2005-05-01", "010505")]
+    [InlineData("2005-02-28", "280205")]
+    [InlineData("2005-03-01", "010305")]
+    [InlineData("2004-02-28", "280204")]
+    [InlineData("2004-02-29", "290204")]
+    [InlineData("2004-03-01", "010304")]
+    [InlineData("2005-06-15", "150605")]
+    [InlineData("2005-01-06", "060105")]
+    public void GenerateStartsCprWithFormattedBirthDate(string birthDateText, string expectedDatePart)
     {
         // Arrange
+        var birthDate = DateOnly.ParseExact(birthDateText, "yyyy-MM-dd", CultureInfo.InvariantCulture);
         var generator = new CprGenerator(new LowestRandom());
 
         // Act
-        var cpr = generator.Generate(BirthDate, gender);
+        var cpr = generator.Generate(birthDate, Gender.Female);
 
         // Assert
-        Assert.Equal(expectedCpr, cpr);
+        Assert.Equal(expectedDatePart, cpr[..6]);
     }
 
     [Theory]
-    [InlineData(Gender.Female, "0601059998")]
-    [InlineData(Gender.Male, "0601059999")]
-    public void Highest_rolls_give_the_highest_cpr_for_the_gender(Gender gender, string expectedCpr)
+    [InlineData(Gender.Female, 0)]
+    [InlineData(Gender.Male, 7)]
+    [InlineData(Gender.Female, 123)]
+    [InlineData(Gender.Male, 999)]
+    public void GenerateReturnsExactlyTenAsciiDigits(Gender gender, int serialNumber)
     {
         // Arrange
-        var generator = new CprGenerator(new HighestRandom());
+        var generator = CreateGeneratorForSerialNumber(serialNumber);
+        var birthDate = new DateOnly(2005, 1, 6);
 
         // Act
-        var cpr = generator.Generate(BirthDate, gender);
+        var cpr = generator.Generate(birthDate, gender);
 
         // Assert
-        Assert.Equal(expectedCpr, cpr);
+        Assert.Equal(10, cpr.Length);
+        Assert.All(cpr, digit => Assert.InRange(digit, '0', '9'));
+    }
+
+    [Theory]
+    [InlineData(Gender.Female, 0, "02468")]
+    [InlineData(Gender.Female, 1, "02468")]
+    [InlineData(Gender.Female, 2, "02468")]
+    [InlineData(Gender.Female, 3, "02468")]
+    [InlineData(Gender.Female, 4, "02468")]
+    [InlineData(Gender.Male, 0, "13579")]
+    [InlineData(Gender.Male, 1, "13579")]
+    [InlineData(Gender.Male, 2, "13579")]
+    [InlineData(Gender.Male, 3, "13579")]
+    [InlineData(Gender.Male, 4, "13579")]
+    public void GenerateUsesLastDigitMatchingGender(Gender gender, int lastDigitChoice, string allowedLastDigits)
+    {
+        // Arrange
+        var generator = CreateGeneratorForLastDigitChoice(lastDigitChoice);
+        var birthDate = new DateOnly(2005, 6, 15);
+
+        // Act
+        var cpr = generator.Generate(birthDate, gender);
+
+        // Assert
+        Assert.Contains(cpr[^1], allowedLastDigits);
+    }
+
+    private static CprGenerator CreateGeneratorForSerialNumber(int serialNumber)
+    {
+        var random = new LoadedRandom { [(0, 1000)] = serialNumber };
+        return new CprGenerator(random);
+    }
+
+    private static CprGenerator CreateGeneratorForLastDigitChoice(int lastDigitChoice)
+    {
+        var random = new LoadedRandom { [(0, 5)] = lastDigitChoice };
+        return new CprGenerator(random);
     }
 }

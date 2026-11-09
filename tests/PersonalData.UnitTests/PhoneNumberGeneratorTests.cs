@@ -2,37 +2,41 @@ using PersonalData.Api.Services;
 
 namespace PersonalData.UnitTests;
 
-/// <summary>
-/// Tests that <see cref="PhoneNumberGenerator"/> picks a valid prefix and fills up to 8 digits,
-/// using fake dice that always roll the lowest or the highest number.
-/// </summary>
 public sealed class PhoneNumberGeneratorTests
 {
-    [Fact]
-    public void Lowest_rolls_give_20000000()
+    [Theory]
+    [InlineData("2", 0, "20000000")]
+    [InlineData("2", 1, "21111111")]
+    [InlineData("2", 9, "29999999")]
+    [InlineData("30", 0, "30000000")]
+    [InlineData("30", 1, "30111111")]
+    [InlineData("30", 9, "30999999")]
+    [InlineData("344", 0, "34400000")]
+    [InlineData("344", 1, "34411111")]
+    [InlineData("344", 9, "34499999")]
+    public void GenerateReturnsEightDigitsWithAllowedPrefix(
+        string prefix, int suffixDigit, string expected)
     {
         // Arrange
-        var generator = new PhoneNumberGenerator(new LowestRandom());
+        var generator = CreateGeneratorForPrefix(prefix, suffixDigit);
 
         // Act
         var phoneNumber = generator.Generate();
 
         // Assert
-        // The first prefix is "2", followed by seven zeros.
-        Assert.Equal("20000000", phoneNumber);
+        Assert.Equal(expected, phoneNumber);
     }
 
-    [Fact]
-    public void Highest_rolls_give_82999999()
+    private static PhoneNumberGenerator CreateGeneratorForPrefix(string prefix, int suffixDigit)
     {
-        // Arrange
-        var generator = new PhoneNumberGenerator(new HighestRandom());
-
-        // Act
-        var phoneNumber = generator.Generate();
-
-        // Assert
-        // The last prefix is "829", followed by five nines.
-        Assert.Equal("82999999", phoneNumber);
+        var prefixChoice = prefix switch
+        {
+            "2" => 0,
+            "30" => 1,
+            "344" => 18,
+            _ => throw new ArgumentOutOfRangeException(nameof(prefix))
+        };
+        var random = new LoadedRandom { [(0, 94)] = prefixChoice, [(0, 10)] = suffixDigit };
+        return new PhoneNumberGenerator(random);
     }
 }

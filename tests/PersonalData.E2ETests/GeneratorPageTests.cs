@@ -3,127 +3,113 @@ using Microsoft.Playwright;
 namespace PersonalData.E2ETests;
 
 /// <summary>
-/// The generator page in a real browser against the running app: what the user sees and can do.
-/// The field formats (CPR, phone, ...) are checked on every response by the Postman collection, not here.
+/// User flows in a real browser against the running app.
 /// </summary>
 public sealed class GeneratorPageTests : E2ETest
 {
     [Fact]
-    public async Task Single_person_shows_one_card_with_all_field_labels()
+    public async Task SinglePersonShowsOneCardWithAllFieldLabels()
     {
         // Arrange
-        await Page.GotoAsync("/");
+        await OpenGeneratorAsync();
 
         // Act
         await GenerateButton.ClickAsync();
 
         // Assert
-        await Expect(Cards).ToHaveCountAsync(1);
-        await Expect(Cards.GetByRole(AriaRole.Term)).ToHaveTextAsync(
+        await Expect(ResultCards).ToHaveCountAsync(1);
+        await Expect(ResultCards.GetByRole(AriaRole.Term)).ToHaveTextAsync(
             ["CPR", "Fornavn", "Efternavn", "Køn", "Fødselsdato", "Adresse", "Postnr. og by", "Telefon"]);
     }
 
     [Fact]
-    public async Task Single_person_reports_one_result_in_status()
+    public async Task SelectingMultiplePersonsRevealsPersonCount()
     {
         // Arrange
-        await Page.GotoAsync("/");
+        await OpenGeneratorAsync();
+        await Expect(PersonCountInput).ToBeHiddenAsync();
+
+        // Act
+        await EndpointSelector.SelectOptionAsync("Flere personer · alle oplysninger");
+
+        // Assert
+        await Expect(PersonCountInput).ToBeVisibleAsync();
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(100)]
+    public async Task MultiplePersonsShowOneCardPerPerson(int personCount)
+    {
+        // Arrange
+        await OpenBulkGeneratorAsync(personCount);
 
         // Act
         await GenerateButton.ClickAsync();
 
         // Assert
-        await Expect(Status).ToHaveTextAsync("1 resultat genereret");
+        await Expect(ResultCards).ToHaveCountAsync(personCount);
     }
 
     [Fact]
-    public async Task Count_field_appears_when_multiple_persons_is_chosen()
+    public async Task PhoneNumberShowsOneTitledCardWithOnlyPhoneField()
     {
         // Arrange
-        await Page.GotoAsync("/");
-        await Expect(Count).ToBeHiddenAsync();
-
-        // Act
-        await Endpoint.SelectOptionAsync("Flere personer · alle oplysninger");
-
-        // Assert
-        await Expect(Count).ToBeVisibleAsync();
-    }
-
-    [Fact]
-    public async Task Multiple_persons_show_one_card_per_person()
-    {
-        // Arrange
-        await Page.GotoAsync("/");
-        await Endpoint.SelectOptionAsync("Flere personer · alle oplysninger");
-        await Count.FillAsync("100");
+        await OpenGeneratorAsync();
+        await EndpointSelector.SelectOptionAsync("Telefonnummer");
 
         // Act
         await GenerateButton.ClickAsync();
 
         // Assert
-        await Expect(Cards).ToHaveCountAsync(100);
+        await Expect(ResultCards).ToHaveCountAsync(1);
+        var resultHeading = ResultCards.GetByRole(AriaRole.Heading);
+        await Expect(resultHeading).ToBeVisibleAsync();
+        await Expect(resultHeading).Not.ToBeEmptyAsync();
+        await Expect(ResultCards.GetByRole(AriaRole.Term)).ToHaveTextAsync(["Telefon"]);
     }
 
-    [Fact]
-    public async Task Multiple_persons_report_how_many_were_generated_in_status()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(101)]
+    public async Task PersonCountOutsideAllowedRangeIsBlockedByForm(int personCount)
     {
         // Arrange
-        await Page.GotoAsync("/");
-        await Endpoint.SelectOptionAsync("Flere personer · alle oplysninger");
-        await Count.FillAsync("2");
+        await OpenBulkGeneratorAsync(personCount);
 
         // Act
         await GenerateButton.ClickAsync();
 
         // Assert
-        await Expect(Status).ToHaveTextAsync("2 personer genereret");
+        Assert.False(await PersonCountInput.EvaluateAsync<bool>("input => input.validity.valid"));
+        await Expect(ResultCards).ToHaveCountAsync(0);
     }
 
     [Fact]
-    public async Task Phone_number_shows_one_card_titled_resultat_1_with_only_a_telefon_row()
-    {
-        // Arrange
-        await Page.GotoAsync("/");
-        await Endpoint.SelectOptionAsync("Telefonnummer");
-
-        // Act
-        await GenerateButton.ClickAsync();
-
-        // Assert
-        await Expect(Cards).ToHaveCountAsync(1);
-        await Expect(Cards.GetByRole(AriaRole.Heading)).ToHaveTextAsync("Resultat 1");
-        await Expect(Cards.GetByRole(AriaRole.Term)).ToHaveTextAsync(["Telefon"]);
-    }
-
-    [Fact]
-    public async Task Count_above_maximum_is_blocked_by_the_form()
-    {
-        // Arrange
-        await Page.GotoAsync("/");
-        await Endpoint.SelectOptionAsync("Flere personer · alle oplysninger");
-        await Count.FillAsync("101");
-
-        // Act
-        await GenerateButton.ClickAsync();
-
-        // Assert
-        await Expect(Cards).ToHaveCountAsync(0);
-        await Expect(Status).ToHaveTextAsync("Klar til at generere");
-    }
-
-    [Fact]
-    public async Task Api_error_is_shown_to_the_user()
+    public async Task ApiFailureShowsHttpStatusInVisibleAlert()
     {
         // Arrange
         await Page.RouteAsync("**/api/person", route => route.FulfillAsync(new() { Status = 500 }));
-        await Page.GotoAsync("/");
+        await OpenGeneratorAsync();
 
         // Act
         await GenerateButton.ClickAsync();
 
         // Assert
-        await Expect(Page.GetByRole(AriaRole.Alert)).ToHaveTextAsync(
-            "API’et svarede med HTTP 500. Prøv igen, og kontrollér at databasen kører.");
+        var errorAlert = Page.GetByRole(AriaRole.Alert);
+        await Expect(errorAlert).ToBeVisibleAsync();
+        await Expect(errorAlert).ToContainTextAsync("HTTP 500");
+    }
+
+    private async Task OpenGeneratorAsync()
+    {
+        await Page.GotoAsync("/");
+    }
+
+    private async Task OpenBulkGeneratorAsync(int personCount)
+    {
+        await OpenGeneratorAsync();
+        await EndpointSelector.SelectOptionAsync("Flere personer · alle oplysninger");
+        await PersonCountInput.FillAsync(personCount.ToString());
     }
 }

@@ -6,18 +6,15 @@ namespace PersonalData.IntegrationTests;
 public class JsonPersonNameRepositoryTests
 {
     [Fact]
-public void GetAll_LoadsKnownPersonFromJsonFile()
-{
-    // Arrange
-    var repository = new JsonPersonNameRepository();
+    public void GetAllLoadsKnownPersonFromJsonFile()
+    {
+        // Arrange
+        var repository = new JsonPersonNameRepository();
 
-    // Act
-    var names = repository.GetAll();
+        // Act
+        var names = repository.GetAll();
 
-    // Assert
-    Assert.Contains(names, n =>
-        n.FirstName == "Annemette P." &&
-        n.LastName == "Nilsson" &&
-        n.Gender == Gender.Female);
-}
+        // Assert
+        Assert.Contains(new NameAndGender("Annemette P.", "Nilsson", Gender.Female), names);
+    }
 }

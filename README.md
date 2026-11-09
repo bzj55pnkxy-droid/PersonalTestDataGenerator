@@ -49,13 +49,38 @@ No .NET SDK? `make app` runs both MySQL and the API in Docker on <http://localho
 | `make down` | Stop containers, keep data |
 | `make clean` | Stop containers and delete data (DB is re-imported next start) |
 
-The unit tests in `tests/PersonalData.UnitTests` need nothing running: `dotnet test tests/PersonalData.UnitTests`. They give the generators fake dice (`Fakes.cs`) that always roll the lowest or highest number, so every expected value is fixed.
+The unit tests in `tests/PersonalData.UnitTests` need no running API or database: `dotnet test tests/PersonalData.UnitTests`.
 
 The E2E tests download Chromium on the first run, so no manual Playwright setup is needed. They test `http://localhost:8080`; set `E2E_BASE_URL` to use another address.
 
+## Unit tests
+
+Related cases use xUnit `[Theory]` / `[InlineData]`, with Arrange–Act–Assert, fixed expected values, a fixed clock and controlled random selections from `Fakes.cs`. Each case exercises the real public generator or service; repository stubs keep JSON files and MySQL outside the unit-test suite.
+
+Across unit, integration and E2E tests, methods use descriptive PascalCase names and explicit Arrange–Act–Assert. Parameterized cases show readable domain values such as ISO dates, letters and phone prefixes. Small private factories hide random selectors and repeated client/page setup; assertions remain visible in the test methods.
+
+The cases follow the team's [current black-box design](docs/Black-box-testdesign.docx):
+
+| Test file | Behavior covered |
+|---|---|
+| `NameGenderGeneratorTests.cs` | Complete female/male name rows, including punctuation and Danish characters; empty repository |
+| `BirthDateGeneratorTests.cs` | All nine valid calendar examples around month transitions, including 29 February 2004 |
+| `CprGeneratorTests.cs` | Hardcoded `ddMMyy` examples, leading date zeroes, ten ASCII digits and allowed gender parity |
+| `AddressGeneratorTests.cs` | House-number and numeric floor/door boundaries; optional uppercase house letter; named and letter/number doors; postal/town row integrity; alphabetic streets; empty repository |
+| `PhoneNumberGeneratorTests.cs` | Representative 1-, 2- and 3-digit allowed prefixes with eight-digit outputs and zero/nine suffix extremes |
+| `FakePersonServiceTests.cs` | Bulk counts 0, 1, 2, 3, 50, 99, 100, 101 and 150; CPR/date/gender consistency in complete and combined person responses |
+
+The implementation's 100-year birth-date window is used only to arrange deterministic date selection, not asserted as an assignment requirement. Street tests do not impose an exact length or allow spaces.
+
+Forbidden output examples (such as a nine-digit CPR, an impossible date, a mismatched name/gender row or a disallowed phone prefix) are not inputs accepted by these generators. The unit suite checks actual generated output; it does not add a validator merely to exercise illustrative invalid strings or claim that every permitted prefix or output can occur. Real dataset loading, API response validation and HTTP errors remain integration/API-test responsibilities.
+
 ## Integration tests
 
-The integration tests use the real API, name data and MySQL database. Start the database before running them:
+The integration tests use the real API, name data and MySQL database.
+
+`PersonApiTests` exercises all nine API functionalities in-process and checks actual output: complete name rows from JSON, CPR format and date/gender relationships, valid birth-date JSON, postal/town row integrity and eight-digit phones. These requests cover the corresponding `FakePersonService` paths in the collected .NET reports. Newman and E2E requests target the separate Docker API, whose execution is not included in those reports.
+
+Start the database before running them:
 
 ```sh
 docker compose up -d --wait db
@@ -63,6 +88,10 @@ dotnet test tests/PersonalData.IntegrationTests/PersonalData.IntegrationTests.cs
 ```
 
 To run only the person endpoint tests, append `--filter FullyQualifiedName~PersonApiTests` to the test command.
+
+## E2E tests
+
+The browser tests verify actual result cards and fields, bulk counts 2 and 100, form boundaries 1 and 101, and a visible HTTP 500 error. Small page-opening helpers arrange each scenario before the user action. Exact status sentences and incidental card-title wording are not pinned.
 
 ## Local CI
 
@@ -84,6 +113,10 @@ make ci
 
 Results: <http://localhost:9000/dashboard?id=personal-test-data-generator>
 
+`make sonar` only starts the server; it does not upload source code. Run `make ci` to publish an analysis. If the pipeline fails before the SonarQube upload step, no new analysis is published. In the project sidebar, choose **Project → Code**, or open <http://localhost:9000/code?id=personal-test-data-generator>, to browse the analyzed source files.
+
+CI passes `sonar.coverage.exclusions=**/wwwroot/**` to the scanner. Frontend files remain included in static analysis and the code browser, but do not contribute to coverage; the .NET coverage reports measure the backend.
+
 ## Project layout
 
 ```
@@ -91,6 +124,7 @@ src/PersonalData.Api/          API: Controllers, Services, Models, Data
 src/PersonalData.Api/wwwroot/  Frontend, served by the API at /
 src/DataFiles/                 person-names.json, addresses.sql
 tests/                         Unit, integration, E2E (Playwright) and Postman tests
+docs/                         Black-box test design and screenshots
 ```
 
 ## API
