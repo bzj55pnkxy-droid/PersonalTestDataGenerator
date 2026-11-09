@@ -10,6 +10,10 @@ ASP.NET Core (.NET 10) · MySQL 8 · HTML/CSS/JS · xUnit · Playwright · Postm
 - Docker with Compose (Docker Desktop, OrbStack, …)
 - `make`: preinstalled on macOS/Linux. On Windows, run `winget install ezwinports.make` and use it from Git Bash (`make help` needs Git Bash's `awk`; the other targets also work in PowerShell)
 
+### VS Code
+
+C# files are formatted automatically on save using the [Microsoft C# extension](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp). Install the extension to enable the formatter; workspace settings are in `.vscode/settings.json`.
+
 ## Quick start
 
 ```sh
