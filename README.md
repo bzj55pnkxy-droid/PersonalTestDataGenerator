@@ -48,6 +48,17 @@ No .NET SDK? `make app` runs both MySQL and the API in Docker on <http://localho
 | `make down` | Stop containers, keep data |
 | `make clean` | Stop containers and delete data (DB is re-imported next start) |
 
+## Integration tests
+
+The integration tests use the real API, name data and MySQL database. Start the database before running them:
+
+```sh
+docker compose up -d --wait db
+dotnet test tests/PersonalData.IntegrationTests/PersonalData.IntegrationTests.csproj
+```
+
+To run only the person endpoint tests, append `--filter FullyQualifiedName~PersonApiTests` to the test command.
+
 ## Local CI
 
 `make ci` runs `scripts/ci.sh`:
