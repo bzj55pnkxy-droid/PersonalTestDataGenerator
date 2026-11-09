@@ -37,6 +37,23 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      # The aspnet image has no curl; this passes once Kestrel accepts connections on 8080.
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/8080"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  # API tests: runs the Postman collection against the api container. `make api-test`.
+  newman:
+    profiles: [apitest]
+    image: postman/newman:6.1.3-alpine
+    volumes:
+      - ./tests/Postman:/etc/newman:ro
+    command: run PersonalData.postman_collection.json --env-var baseUrl=http://api:8080
+    depends_on:
+      api:
+        condition: service_healthy
 
   sonarqube:
     profiles: [sonar]

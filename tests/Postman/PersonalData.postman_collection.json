@@ -1,0 +1,490 @@
+{
+  "info": {
+    "name": "Personal Test Data Generator",
+    "description": "API tests. Test cases come from docs/black-box-test-design.md. Run with `make api-test`; baseUrl is overridden by Newman.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Output oracles from docs/black-box-test-design.md, sections 4-8 (assumption IDs A4-A9 refer to section 9).",
+          "// Runs after every request and checks every field the response contains; a bulk response is checked person by person.",
+          "const PHONE_PREFIXES = '2 30 31 40 41 42 50 51 52 53 60 61 71 81 91 92 93 342 344-349 356-357 359 362 365-366 389 398 431 441 462 466 468 472 474 476 478 485-486 488-489 493-496 498-499 542-543 545 551-552 556 571-574 577 579 584 586-587 589 597-598 627 629 641 649 658 662-665 667 692-694 697 771-772 782-783 785-786 788-789 826-827 829'",
+          "    .split(' ')",
+          "    .flatMap(range => {",
+          "        const [from, to = from] = range.split('-').map(Number);",
+          "        return Array.from({ length: to - from + 1 }, (_, i) => String(from + i));",
+          "    });",
+          "",
+          "// A4: date of birth in (today - 100 years, today], UTC like the API container.",
+          "const now = new Date();",
+          "const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());",
+          "const hundredYearsAgo = Date.UTC(now.getUTCFullYear() - 100, now.getUTCMonth(), now.getUTCDate());",
+          "",
+          "// Timestamp of a real calendar date, or null for dates like 30 February.",
+          "function realDate(year, month, day) {",
+          "    const date = new Date(Date.UTC(year, month - 1, day));",
+          "    const real = date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;",
+          "    return real ? date.getTime() : null;",
+          "}",
+          "const inWindow = time => time !== null && time > hundredYearsAgo && time <= today;",
+          "const ddMMyy = isoDate => isoDate.slice(8, 10) + isoDate.slice(5, 7) + isoDate.slice(2, 4);",
+          "const addressOf = p => p.address || ('street' in p ? p : null);",
+          "",
+          "const RULES = [",
+          "    {",
+          "        name: 'cpr: 10 digits, first six a real ddMMyy date in the last 100 years',",
+          "        applies: p => 'cpr' in p,",
+          "        check: (p, at) => {",
+          "            pm.expect(p.cpr, at + 'cpr').to.match(/^\\d{10}$/);",
+          "            const [day, month, yy] = [0, 2, 4].map(i => Number(p.cpr.slice(i, i + 2)));",
+          "            const valid = [1900, 2000].some(century => inWindow(realDate(century + yy, month, day)));",
+          "            pm.expect(valid, at + 'cpr ' + p.cpr + ' date part').to.be.true;",
+          "        }",
+          "    },",
+          "    {",
+          "        name: 'firstName, lastName: non-empty',",
+          "        applies: p => 'firstName' in p,",
+          "        check: (p, at) => {",
+          "            pm.expect(p.firstName, at + 'firstName').to.be.a('string').that.is.not.empty;",
+          "            pm.expect(p.lastName, at + 'lastName').to.be.a('string').that.is.not.empty;",
+          "        }",
+          "    },",
+          "    {",
+          "        name: 'gender: female or male',",
+          "        applies: p => 'gender' in p,",
+          "        check: (p, at) => pm.expect(p.gender, at + 'gender').to.be.oneOf(['female', 'male'])",
+          "    },",
+          "    {",
+          "        name: 'birthDate: ISO yyyy-MM-dd, a real date in the last 100 years (A4, A5)',",
+          "        applies: p => 'birthDate' in p,",
+          "        check: (p, at) => {",
+          "            pm.expect(p.birthDate, at + 'birthDate').to.match(/^\\d{4}-\\d{2}-\\d{2}$/);",
+          "            const [year, month, day] = p.birthDate.split('-').map(Number);",
+          "            pm.expect(inWindow(realDate(year, month, day)), at + 'birthDate ' + p.birthDate + ' in window').to.be.true;",
+          "        }",
+          "    },",
+          "    {",
+          "        name: 'C1: cpr starts with birthDate as ddMMyy',",
+          "        applies: p => 'cpr' in p && 'birthDate' in p,",
+          "        check: (p, at) => pm.expect(p.cpr.slice(0, 6), at + 'cpr date part').to.equal(ddMMyy(p.birthDate))",
+          "    },",
+          "    {",
+          "        name: 'C2: last cpr digit even for female, odd for male',",
+          "        applies: p => 'cpr' in p && 'gender' in p,",
+          "        check: (p, at) => pm.expect(Number(p.cpr[9]) % 2, at + 'cpr ' + p.cpr + ' parity for ' + p.gender).to.equal(p.gender === 'female' ? 0 : 1)",
+          "    },",
+          "    {",
+          "        name: 'phoneNumber: 8 digits with an allowed prefix',",
+          "        applies: p => 'phoneNumber' in p,",
+          "        check: (p, at) => {",
+          "            pm.expect(p.phoneNumber, at + 'phoneNumber').to.match(/^\\d{8}$/);",
+          "            pm.expect(PHONE_PREFIXES.some(prefix => p.phoneNumber.startsWith(prefix)), at + 'phoneNumber ' + p.phoneNumber + ' prefix').to.be.true;",
+          "        }",
+          "    },",
+          "    {",
+          "        name: 'street: a letter, then letters and spaces, A-Z a-z ÆØÅ æøå (A7)',",
+          "        applies: p => addressOf(p) !== null,",
+          "        check: (p, at) => pm.expect(addressOf(p).street, at + 'street').to.match(/^[A-Za-zÆØÅæøå][A-Za-zÆØÅæøå ]*$/)",
+          "    },",
+          "    {",
+          "        name: 'number: 1-999, optionally one uppercase A-Z (A8, A9)',",
+          "        applies: p => addressOf(p) !== null,",
+          "        check: (p, at) => pm.expect(addressOf(p).number, at + 'number').to.match(/^[1-9]\\d{0,2}[A-Z]?$/)",
+          "    },",
+          "    {",
+          "        name: 'floor: st or 1-99 (A9)',",
+          "        applies: p => addressOf(p) !== null,",
+          "        check: (p, at) => pm.expect(addressOf(p).floor, at + 'floor').to.match(/^(st|[1-9]\\d?)$/)",
+          "    },",
+          "    {",
+          "        name: 'door: th/mf/tv, 1-50, or a-z/æøå, optional dash, 1-3 digits (A8, A9)',",
+          "        applies: p => addressOf(p) !== null,",
+          "        check: (p, at) => pm.expect(addressOf(p).door, at + 'door').to.match(/^(th|mf|tv|[1-9]|[1-4]\\d|50|[a-zæøå]-?\\d{1,3})$/)",
+          "    },",
+          "    {",
+          "        name: 'postalCode: 4 digits, townName: non-empty',",
+          "        applies: p => addressOf(p) !== null,",
+          "        check: (p, at) => {",
+          "            pm.expect(addressOf(p).postalCode, at + 'postalCode').to.match(/^\\d{4}$/);",
+          "            pm.expect(addressOf(p).townName, at + 'townName').to.be.a('string').that.is.not.empty;",
+          "        }",
+          "    }",
+          "];",
+          "",
+          "if (pm.response.code === 200) {",
+          "    pm.test('Content-Type is JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+          "    const body = pm.response.json();",
+          "    const persons = Array.isArray(body) ? body : [body];",
+          "    RULES.filter(rule => persons.length > 0 && rule.applies(persons[0])).forEach(rule =>",
+          "        pm.test(rule.name, () => persons.forEach((p, i) => rule.check(p, persons.length > 1 ? 'person ' + i + ': ' : ''))));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Endpoints",
+      "description": "One request per endpoint (section 8 table). Each checks status and field set; the collection script checks field formats and C1/C2.",
+      "item": [
+        {
+          "name": "GET /api/cpr",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/cpr",
+            "description": "CPR only: format and date part (section 5)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('fields: cpr', () => pm.expect(Object.keys(pm.response.json())).to.have.members([\"cpr\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/name-gender",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/name-gender",
+            "description": "Name and gender (section 3)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('fields: firstName, lastName, gender', () => pm.expect(Object.keys(pm.response.json())).to.have.members([\"firstName\", \"lastName\", \"gender\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/name-gender-dob",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/name-gender-dob",
+            "description": "Name, gender and date of birth (sections 3, 4)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('fields: firstName, lastName, gender, birthDate', () => pm.expect(Object.keys(pm.response.json())).to.have.members([\"firstName\", \"lastName\", \"gender\", \"birthDate\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/cpr-name-gender",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/cpr-name-gender",
+            "description": "CPR, name and gender: C2 applies (section 8)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('fields: cpr, firstName, lastName, gender', () => pm.expect(Object.keys(pm.response.json())).to.have.members([\"cpr\", \"firstName\", \"lastName\", \"gender\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/cpr-name-gender-dob",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/cpr-name-gender-dob",
+            "description": "CPR, name, gender and date of birth: C1 and C2 apply (section 8)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('fields: cpr, firstName, lastName, gender, birthDate', () => pm.expect(Object.keys(pm.response.json())).to.have.members([\"cpr\", \"firstName\", \"lastName\", \"gender\", \"birthDate\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/address",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/address",
+            "description": "Address (section 6)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('fields: street, number, floor, door, postalCode, townName', () => pm.expect(Object.keys(pm.response.json())).to.have.members([\"street\", \"number\", \"floor\", \"door\", \"postalCode\", \"townName\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/phone",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/phone",
+            "description": "Mobile phone number (section 7)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('fields: phoneNumber', () => pm.expect(Object.keys(pm.response.json())).to.have.members([\"phoneNumber\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/person",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/person",
+            "description": "All fields of one person: C1 and C2 apply (section 8)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('fields: cpr, firstName, lastName, gender, birthDate, address, phoneNumber', () => pm.expect(Object.keys(pm.response.json())).to.have.members([\"cpr\", \"firstName\", \"lastName\", \"gender\", \"birthDate\", \"address\", \"phoneNumber\"]));",
+                  "pm.test('address fields: street, number, floor, door, postalCode, townName', () => pm.expect(Object.keys(pm.response.json().address)).to.have.members([\"street\", \"number\", \"floor\", \"door\", \"postalCode\", \"townName\"]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bulk count: valid (2-100)",
+      "description": "Section 2, valid partition 2-100.",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Section 2: a valid count returns exactly that many complete persons. Field formats are checked by the collection script.",
+              "const count = Number(pm.request.url.query.get('count'));",
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('returns exactly ' + count + ' persons', () => pm.expect(pm.response.json()).to.be.an('array').with.lengthOf(count));",
+              "pm.test('every person has all fields', () => pm.response.json().forEach((p, i) => {",
+              "    pm.expect(Object.keys(p), 'person ' + i).to.have.members([\"cpr\", \"firstName\", \"lastName\", \"gender\", \"birthDate\", \"address\", \"phoneNumber\"]);",
+              "    pm.expect(Object.keys(p.address), 'person ' + i + ' address').to.have.members([\"street\", \"number\", \"floor\", \"door\", \"postalCode\", \"townName\"]);",
+              "}));"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "count=2: BVA lower boundary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=2"
+          }
+        },
+        {
+          "name": "count=3: BVA just above lower boundary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=3"
+          }
+        },
+        {
+          "name": "count=51: EP valid representative",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=51"
+          }
+        },
+        {
+          "name": "count=99: BVA just below upper boundary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=99"
+          }
+        },
+        {
+          "name": "count=100: BVA upper boundary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=100"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bulk count: invalid (400)",
+      "description": "Section 2, invalid partitions, including values outside the integer domain.",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Section 2, A1: an invalid count gives 400 with validation problem details naming count.",
+              "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+              "pm.test('problem details with an error for count', () => {",
+              "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json');",
+              "    pm.expect(pm.response.json().errors).to.have.property('count');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "count=-2147483648: MIN",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=-2147483648"
+          }
+        },
+        {
+          "name": "count=-50: EP MIN to -1",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=-50"
+          }
+        },
+        {
+          "name": "count=-2: BVA around -1",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=-2"
+          }
+        },
+        {
+          "name": "count=-1: BVA around -1",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=-1"
+          }
+        },
+        {
+          "name": "count=0: EP and BVA 0",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=0"
+          }
+        },
+        {
+          "name": "count=1: BVA just below lower boundary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=1"
+          }
+        },
+        {
+          "name": "count=101: BVA just above upper boundary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=101"
+          }
+        },
+        {
+          "name": "count=102: BVA around 101",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=102"
+          }
+        },
+        {
+          "name": "count=500: EP 101 to MAX",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=500"
+          }
+        },
+        {
+          "name": "count=2147483647: MAX",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=2147483647"
+          }
+        },
+        {
+          "name": "(no count): parameter missing",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons"
+          }
+        },
+        {
+          "name": "count=: empty",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count="
+          }
+        },
+        {
+          "name": "count=abc: not a number",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=abc"
+          }
+        },
+        {
+          "name": "count=2.5: decimal",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=2.5"
+          }
+        },
+        {
+          "name": "count=2147483648: larger than int",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/persons?count=2147483648"
+          }
+        }
+      ]
+    }
+  ]
+}

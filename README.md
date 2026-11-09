@@ -37,10 +37,32 @@ No .NET SDK? `make app` runs both MySQL and the API in Docker on <http://localho
 | `make app` | MySQL + API in Docker on :8080 |
 | `make db` | MySQL only, on :3307 |
 | `make test` | Run all tests (`make db` first if tests need MySQL) |
-| `make sonar` | SonarQube on :9000 (first login `admin` / `admin`) |
+| `make api-test` | Run the Postman collection `tests/Postman/PersonalData.postman_collection.json` with Newman (Docker) against the API container (starts it if needed) |
+| `make ci` | Local CI pipeline, see below |
+| `make sonar` | SonarQube on :9000, dashboard open without login |
 | `make logs` | Follow container logs |
 | `make down` | Stop containers, keep data |
 | `make clean` | Stop containers and delete data (DB is re-imported next start) |
+
+## Local CI
+
+`make ci` runs `scripts/ci.sh`:
+
+1. Starts MySQL + API in Docker and waits until both are healthy
+2. Builds and runs all test projects with coverage, wrapped in a SonarQube analysis
+3. Runs the Postman collection with Newman against the API container
+4. Stops MySQL + API (also on failure; data is kept)
+
+On screen it shows the lines that matter per step: containers healthy, build result and warnings, the result per test project (with the error of every failed test), SonarQube warnings plus quality gate and coverage, and every Postman request with any failed assertions and the summary table. The full output of every step is in `TestResults/logs/`.
+
+Needs SonarQube running. No token or login: the script creates its own analysis token with the default `admin` / `admin`, which stays unchanged because the dashboard needs no login.
+
+```sh
+make sonar
+make ci
+```
+
+Results: <http://localhost:9000/dashboard?id=personal-test-data-generator>
 
 ## Project layout
 
